@@ -41,7 +41,11 @@ lines(density(new_data), col = "blue")
 # Add a legend
 legend("topright", legend = c("original", "imputed"), col = c("red", "blue"), lwd = 2)
 
+mean(data, na.rm = TRUE)
+var(data, na.rm = TRUE)
 
+mean(new_data, na.rm = TRUE)
+var(new_data, na.rm = TRUE)
 
 ###############################################################################################
 
@@ -115,3 +119,90 @@ lines(density(new_data), col = "blue")
 
 # Add a legend
 legend("topright", legend = c("original", "imputed"), col = c("red", "blue"), lwd = 2)
+
+
+
+
+###############################################################################################
+
+# Bi-variate Imputation
+# Data set creation
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Create synthetic data
+
+# Number of observations
+n <- 100 
+
+# Normally distributed ages
+Age <- rnorm(n, mean = 50, sd = 10)
+
+# Normally distributed BMI
+BMI <- rnorm(n, mean = 25, sd = 5)  
+BloodPressure <- 120 + 0.3 * Age - 0.25 * BMI + rnorm(n, mean = 0, sd = 15)
+
+# Pulse with some relation to Age and BMI
+Pulse <- 70 + 0.5 * Age - 0.2 * BMI + rnorm(n, mean = 0, sd = 10)
+
+# Introduce NA values randomly in BMI and Pulse
+set.seed(321)
+
+# Randomly choose 20 indices for Pulse
+missing_indices_Pulse <- sample(1:n, 20) 
+
+# sort the random indices
+missing_indices_Pulse <- sort(unlist(missing_indices_Pulse))
+missing_indices_Pulse
+
+# Preserve original data for comparison
+original_missing_pulse <- Pulse[missing_indices_Pulse]
+original_missing_pulse
+
+# Assign NA to these indices in Pulse
+Pulse[missing_indices_Pulse] <- NA 
+
+# Combine into a data frame
+data_df <- data.frame(Age, BMI, BloodPressure, Pulse)
+
+# View the first few rows of the data set
+head(data_df)
+
+summary(data_df)
+
+#Bi-variate Imputation-1: Multiple Regression Model
+
+# Fit the model using complete cases
+fit <- lm(Pulse ~ Age + BMI + BloodPressure, 
+          data = data_df, 
+          subset = !is.na(data_df$Pulse))
+
+predicted_values <- predict(fit, newdata = data_df[missing_indices_Pulse, ])
+
+# Add an error term to the predicted values
+residual_sd <- sd(residuals(fit))  # Standard deviation of the model's residuals
+error_term <- rnorm(length(predicted_values), mean = 0, sd = residual_sd)
+imputed_values <- predicted_values + error_term
+
+# copy the original pulse data
+imputed_pulse <- Pulse
+
+# add the imputed ones
+imputed_pulse[missing_indices_Pulse] <- imputed_values
+
+# original data
+Pulse[missing_indices_Pulse] <- original_missing_pulse
+
+# Plot the density of v1
+plot(density(na.omit(Pulse)),
+     main = "Density Plot of Two Vectors",
+     xlab = "Data Values",
+     col = "red", 
+     ylim = range(c(density(na.omit(Pulse))$y, density(imputed_pulse)$y)))
+
+lines(density(imputed_pulse), col = "blue")
+
+# Add a legend
+legend("topright", legend = c("original", "imputed"), col = c("red", "blue"), lwd = 2)
+
