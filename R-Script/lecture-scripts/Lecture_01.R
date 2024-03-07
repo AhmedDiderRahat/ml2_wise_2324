@@ -171,7 +171,9 @@ head(data_df)
 
 summary(data_df)
 
-#Bi-variate Imputation-1: Multiple Regression Model
+
+
+#Bivariate Imputation-1: Multiple Regression Model
 
 # Fit the model using complete cases
 fit <- lm(Pulse ~ Age + BMI + BloodPressure, 
@@ -206,3 +208,49 @@ lines(density(imputed_pulse), col = "blue")
 # Add a legend
 legend("topright", legend = c("original", "imputed"), col = c("red", "blue"), lwd = 2)
 
+
+
+###############################################################################################
+
+
+#Bivariate Imputation-2: Gibbs Sampling
+
+
+# load the mice package
+library("mice")
+
+data("airquality")
+
+
+# pattern of the data
+md.pattern(airquality)
+
+
+
+# The function mice runs the Gibbs sampler.
+# m=5: obtain 5 different imputations (realisations)
+# meth=norm : the method used to obtain the conditional distributions and
+# updates, norm means "Bayesian linear regression"
+
+tempData <- mice(airquality, m = 5, maxit = 50, meth = "norm", seed = 500)
+
+# These are the imputed values for Ozone. The 5 columns are the replications,
+# and the row numbers are given.
+tempData$imp$Ozone
+
+
+# To obtain a full data set with the 1st imputation
+completedData <- complete(tempData, 1)
+
+# Check the missing values after imputation
+md.pattern(completedData)
+
+
+# Now that we have complete data we can fit this regression model, but we have 5 
+# realisations. Rather than choose one of the 5, we can fit the model to each of 
+# the realisations and "pool" (average) the results. This should be done using 
+# the function pool() in the mice package.
+
+model1 <- with(tempData, lm(Temp ~ Ozone + Solar.R + Wind))
+
+summary(pool(model1))
